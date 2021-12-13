@@ -1,0 +1,154 @@
+#!/bin/sh
+
+digirouteinfo() { cat << EOF
+digiroute: Combines the digirooster and ovrt script to generate OV routes for every day in the specified range
+Usage: Run the program normally to be prompted for info.
+       Use the flags to predefine info.
+Options:
+  -x	Pipe seperated list of subjects to exclude
+  -o	Outward shift, the amount of time you want to substract or add to the time school starts (e.g. +30 minutes)
+  -r	Return shift, the amount of time you want to substract or add to the time school is finished (e.g. +30 minutes)
+Ovrt options:
+  Outward:
+  -f	From where you want to start the route
+  -v	Via, an intermediary place between the start and end of route
+  -t	To where you want the route to arrive
+  -O	Interchange time in minutes
+  -I	Prefer routes with the lowest amount transfers
+
+  Return:
+  -F    From where you want to start the route
+  -V	Via, an intermediary place between the start and end of route
+  -T	To where you want the route to arrive
+  -R	Interchange time in minutes
+  -J	Prefer routes with the lowest amount of transfers
+Digirooster options:
+  -g    The group number (e.g 1830, use devtools for this)
+  -y    The school year
+  -i    The school ID, found by inspecting the Digirooster request
+  -s    The starting range of the date
+  -e    The end range of the date
+  -S    The starting time
+  -E    The end time
+EOF
+}
+
+while getopts "o:p:f:v:t:F:V:T:g:y:i:s:e:S:E:x:O:P:rIJ" o; do case "${o}" in
+	o) outwardshift="$OPTARG" ; outwardshiftpredef=1 ;;
+	p) returnshift="$OPTARG" ; returnshiftpredef=1 ;;
+	f) fromoutward="$OPTARG" ;;
+	v) viaoutward="$OPTARG" ;;
+	t) tooutward="$OPTARG" ;;
+	F) fromreturn="$OPTARG" ;;
+	V) viareturn="$OPTARG" ;;
+	T) toreturn="$OPTARG" ;;
+        g) group="$OPTARG" ;;
+        y) year="$OPTARG" ;;
+        i) schoolid="$OPTARG" ;;
+        s) datestart="$OPTARG" ;;
+        e) dateend="$OPTARG" ;;
+        S) timestart="$OPTARG" ;;
+        E) timeend="$OPTARG" ;;
+	x) exclude="$OPTARG" ;;
+	O) intchoutwardtime="$OPTARG" ;;
+	P) intchreturntime="$OPTARG" ;;
+	r) raw=1 ;;
+	I) lowoutwardtransfers="S" ;;
+	J) lowreturntransfers="S" ;;
+        *) digirouteinfo ; exit 1 ;;
+esac done
+
+[ -z "$outwardshiftpredef" ] && printf "\e[1;34mGive the outward shift value: (Optional)\e[0m\n" >/dev/tty &&
+	read -r outwardshift
+while ! date -d "today $outwardshift" >/dev/null 2>&1; do
+	printf "\e[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\e[0m\n" "$outwardshift" >/dev/tty
+	read -r outwardshift
+done
+
+[ -z "$returnshiftpredef" ] && printf "\e[1;34mGive the return shift value: (Optional)\e[0m\n" >/dev/tty &&
+	read -r returnshift
+while ! date -d "today $returnshift" >/dev/null 2>&1; do
+	printf "\e[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\e[0m\n" "$returnshift" >/dev/tty
+	read -r returnshift
+done
+
+# If exclude is set, format exclude for use in awk
+[ -n "$exclude" ] &&
+	exclude=$(echo "$exclude" | sed "s@/@\\\/@g ; s@|@/|| \$3 ~ /@g") &&
+	exclude="\$3 ~ /$exclude/ { next }"
+
+# Get data from digirooster and format it correctly
+info=$(digirooster \
+	-g "$group" \
+	-y "$year" \
+	-i "$schoolid" \
+	-s "$datestart" \
+	-e "$dateend" \
+	-S "$timestart" \
+	-E "$timeend" |
+	grep -o "Name\":\"[^\"]*\",\"Start\":\"[^\"]*\",\"End\":\"[^\"]*" |
+	awk -F"\"" ''"$exclude"' { date = substr($7, 1, 10) ; gsub(/-/, "", date) } date < '"$(date +"%Y%m%d")"' { next } day !~ substr($7, 9, 2) { day = substr($7, 9, 2) ; sub(/:..$/, "", $7) sub(/[^T]*/, "", prev) sub(/:..$/, "", prev) ; print start prev ; start = $7 } { prev = $11 } END { sub(/[^T]*/, "", prev) sub(/:..$/, "", prev) ; print start prev }' |
+	tail -n +2)
+
+[ -z "$info" ] && printf "\e[1;34mNo Digirooster data available.\e[0m\n" && exit
+
+# Loop through all lines of digirooster data and run ovrt on them
+if [ -n "$raw" ]; then
+	echo "$info" | while read -r line; do
+		date=$(echo "$line" | cut -d'T' -f1)
+
+		# Apply outward shift to starttime
+		starttime=$(echo "$line" | cut -d'T' -f2) starttime=$(date -d "$starttime $date $outwardshift" +"%H:%M")
+
+		# Apply return shift to endtime
+		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +"%H:%M")
+
+		ovrt \
+			-f "$fromoutward" \
+			-v "$viaoutward" \
+			-t "$tooutward" \
+			-d "$date" \
+			-c "$starttime" \
+			-i "$intchoutwardtime" \
+			-Ar''$lowoutwardtransfers'' |
+			sed "s/^/$date|$starttime|/g"
+
+		ovrt \
+			-f "$fromreturn" \
+			-v "$viareturn" \
+			-t "$toreturn" \
+			-d "$date" \
+			-c "$endtime" \
+			-i "$intchreturntime" \
+			-Dr''$lowreturntransfers'' |
+			sed "s/^/$date|$endtime|/g"
+	done
+else
+	echo "$info" | while read -r line; do
+		date=$(echo "$line" | cut -d'T' -f1)
+
+		# Apply outward shift to starttime
+		starttime=$(echo "$line" | cut -d'T' -f2) starttime=$(date -d "$starttime $date $outwardshift" +"%H:%M")
+
+		# Apply return shift to endtime
+		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +"%H:%M")
+
+		printf "%b" "\n\e[1;34m=====| $(date -d "$date" +"%A %d %B (%Y-%m-%d)") |=====\n\e[1;32m- ($starttime) OUTWARD:\e[0m\n$(ovrt \
+			-f "$fromoutward" \
+			-v "$viaoutward" \
+			-t "$tooutward" \
+			-d "$date" \
+			-c "$starttime" \
+			-i "$intchoutwardtime" \
+			-A''$lowoutwardtransfers'')\n"
+
+		printf "%b" "\n\e[1;31m- ($endtime) RETURN:\e[0m\n$(ovrt \
+			-f "$fromreturn" \
+			-v "$viareturn" \
+			-t "$toreturn" \
+			-d "$date" \
+			-c "$endtime" \
+			-i "$intchreturntime" \
+			-D''$lowreturntransfers'')\n"
+	done
+fi

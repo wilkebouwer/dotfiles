@@ -1,0 +1,29 @@
+#!/bin/sh
+# Description: Sort files into year/month/day/ folders based on modification date.
+#
+# Usage: '$scriptname <source file(s)> <destination directory>'
+
+[ -z "$1" ] && echo "missing file operand" && exit 1
+[ -z "$2" ] && echo "missing destination file operand after '$1'" && exit 1
+
+destdir=$(echo "$@" | rev | cut -d' ' -f1 | rev)
+[ ! -d "$destdir" ] && echo "target '$destdir' is not a directory" && exit 1
+
+i=1; while [ $i -le $(($# - 1)) ]; do
+	file=$(eval "echo \"\$$i\"")
+	fileinfo=$(stat -c %y "$file")
+
+	year=${fileinfo%%-*}
+	month=${fileinfo#*-} month=${month%%-*}
+	day=${fileinfo##*-} day=${day%% *}
+
+	mkdir -p "$destdir/$year/$month/$day/"
+
+	if ! mv "$file" "$destdir/$year/$month/$day/" ; then
+		rmdir "$destdir/$year/$month/$day/" 2>/dev/null
+		rmdir "$destdir/$year/$month/" 2>/dev/null
+		rmdir "$destdir/$year/" 2>/dev/null
+	fi
+
+	i=$((i + 1))
+done

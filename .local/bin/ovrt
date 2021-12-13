@@ -1,0 +1,213 @@
+#!/bin/sh
+ovrtinfo() { cat << EOF
+ovrt: OV-route, plan a public transport route using https://9292.nl
+Dependencies: curl fzf
+Usage: Run the program normally to be prompted for info.
+       You can use the flags to predefine info, you won't be prompted for them.
+Options:
+  -f	From where you want to start the route
+  -v	Via, an intermediary place between the start and end of the route
+  -t	To where you want the route to arrive
+  -d	The date
+  -c	The time
+  -i	Interchange time in minutes
+  -r	Output the data in raw CSV format
+  -D	Make the time the departing time
+  -A	Make the time the arrival time
+  -S	Prefer route with the lowest amount of transfers
+EOF
+}
+
+# User editable variables
+ovlocs="${XDG_DATA_HOME:-$HOME/.local/share}/ovlocs"
+
+while getopts "f:v:t:d:c:i:rDAS" o; do case "${o}" in
+	f) from="$OPTARG" ;;
+	v) via="$OPTARG" ; viapredef=1 ;;
+	t) to="$OPTARG" ;;
+	d) datetmp="$OPTARG" ;;
+	c) timetmp="$OPTARG" ;;
+	i) intchtime="$OPTARG" ; intchtimepredef=1 ;;
+	r) raw=1 ;;
+	D) deporarr="vertrek" ;;
+	A) deporarr="aankomst" ;;
+	S) lowtransfers=1 ; lowtransferspredef=1 ;;
+	*) ovrtinfo ; exit 1 ;;
+esac done
+
+url="https://9292.nl/reisadvies"
+domain="9292.nl"
+
+# Check if ovlocs exists and if connected to the internet
+[ ! -f "$ovlocs" ] && printf "\e[1;31m'%s': No such file.\e[0m\n" "$ovlocs" >/dev/tty && exit 1
+! ping -q -w 1 -c 1 "$domain" >/dev/null 2>&1 && printf "\e[1;31mPlease connect to the internet before running this script.\e[0m\n" >/dev/tty && exit 1
+
+[ -z "$from" ] && printf "\e[1;34mFrom where:\e[0m\n" >/dev/tty &&
+	from=$(fzf < "$ovlocs")
+while [ -z "$(sed -n "\@$from@p" "$ovlocs" 2>/dev/null)" ]; do
+	printf "\e[1;31m'%s' is not a valid location. Please select the location.\e[0m\n" "$from" >/dev/tty
+	from=$(fzf < "$ovlocs")
+done
+
+[ -z "$viapredef" ] && printf "\e[1;34mVia where: (optional)\e[0m\n" >/dev/tty &&
+	via=$(sed "\@$from@d" "$ovlocs" | fzf)
+while [ -z "$(sed -n "\@$from@d ; \@$via@p" "$ovlocs")" ] && ! echo "$via" | grep -q "^$"; do
+	printf "\e[1;31m'%s' is not a valid location. Please select the location.\e[0m\n" "$via" >/dev/tty
+	via=$(sed "\@$from@d" "$ovlocs" | fzf)
+done
+
+[ -z "$to" ] && printf "\e[1;34mTo where:\e[0m\n" > /dev/tty &&
+	to=$(sed "\@$from@d ; \@$via@d" "$ovlocs" | fzf)
+while [ -z "$(sed -n "\@$from@d ; \@$via@d ; \@$to@p" "$ovlocs")" ]; do
+	printf "\e[1;31m'%s' is not a valid location. Please select the location.\e[0m\n" "$to" >/dev/tty
+	to=$(sed "\@$from@d ; \@$via@d" "$ovlocs" | fzf)
+done
+
+[ -z "$datetmp" ] && printf "\e[1;34mGive the date:\e[0m\n" >/dev/tty &&
+	read -r datetmp
+while ! date=$(date -d "$datetmp" +%Y-%m-%d 2>/dev/null) || [ "$(date "+%Y%m%d")" -gt "$(echo "$date" | tr -d "-")" ]; do
+	printf "\e[1;31m'%s' is not a valid date. Please retype the date.\e[0m\n" "$datetmp" >/dev/tty
+	read -r datetmp
+done
+
+[ -z "$timetmp" ] && printf "\e[1;34mGive the time:\e[0m\n" >/dev/tty &&
+	read -r timetmp
+while ! time=$(date -d "$timetmp" +%H:%M 2>/dev/null); do
+	printf "\e[1;31m'%s' is not a valid time. Please retype the time.\e[0m\n" "$timetmp" >/dev/tty
+	read -r timetmp
+done
+
+while [ -z "$deporarr" ]; do
+	printf "\e[1;34mFor department time or for arrival time? [da]\e[0m" >/dev/tty &&
+    		read -r  da
+    	case $da in
+        	[Dd]* ) deporarr="vertrek"; break ;;
+        	[Aa]* ) deporarr="aankomst"; break ;;
+        	* ) printf "\e[1;31mPlease answer either 'd' or 'a'\e[0m\n" >/dev/tty ;;
+   	esac
+done
+
+[ -z "$intchtimepredef" ] && printf "\e[1;34mInterchange time in minutes: (default: 0)\e[0m\n" >/dev/tty &&
+	read -r intchtime
+while ! echo "$intchtime" | grep -q "^[0-9]*$"; do
+	printf "\e[1;31m'%s' is not a valid interchange time. Please retype the interchange time.\e[0m\n" "$intchtime" >/dev/tty
+	read -r intchtime
+done
+
+while [ -z "$lowtransferspredef" ]; do
+	printf "\e[1;34mPrefer route with the lowest amount of transfers? [yN]\e[0m" >/dev/tty &&
+		read -r yn
+    	case $yn in
+        	[Yy]* ) lowtransfers="1"; break ;;
+        	[Nn]* ) break ;;
+		"" ) break ;;
+        	* ) printf "\e[1;31mPlease answer either yes or no\e[0m\n" >/dev/tty ;;
+   	esac
+done
+
+# Format data for the curl request
+echo "$intchtime" | grep -q "^$" && intchtime=0
+
+fromref=$(echo "$from" | cut -d'|' -f3)
+fromtxt=$(echo "$from" | cut -d'|' -f2)
+if [ -n "$via" ] ; then
+	viaref=$(echo "$via" | cut -d'|' -f3)
+	viatxt=$(echo "$via" | cut -d'|' -f2)
+fi
+toref=$(echo "$to" | cut -d'|' -f3)
+totxt=$(echo "$to" | cut -d'|' -f2)
+
+datefmt=$(date -d "$date" +%d-%m-%Y)
+
+# Make the curl request and get the data of the routes
+ovresp=$(curl --silent --request POST "$url" \
+	-F fromText="$fromtxt" \
+	-F fromLock=false \
+	-F fromOriginal= \
+	-F fromRef="$fromref" \
+   	-F fromRefOriginal= \
+   	-F viaText="$viatxt" \
+   	-F viaOriginal= \
+   	-F viaRef="$viaref" \
+   	-F toLock=false \
+	-F toOriginal= \
+   	-F toRef="$toref" \
+   	-F toRefOriginal= \
+   	-F toText="$totxt"\
+   	-F date="$datefmt" \
+   	-F time="$time" \
+   	-F dateTime="$date$time" \
+   	-F searchType="$deporarr" \
+   	-F extraInterchangeTime="$intchtime" \
+   	-F travelByBus=on \
+   	-F travelByTrain=on \
+   	-F travelByTram=on \
+   	-F travelBySubway=on \
+   	-F travelByFerry=on \
+	-F planWithAccessibility=false \
+	--compressed |
+	grep "DESCRIPTION:" |
+	sed "s/\\\n\\\nBekijk de meest actuele reisinformatie op: .*//" |
+	# Convert HTML special entities to normal text
+	perl -n -mHTML::Entities -e ' ; print HTML::Entities::decode_entities($_) ;')
+
+# Get the relevant route to print
+if [ -n "$lowtransfers" ]; then
+	# Filter the data to only include relevant routes
+	[ $deporarr = "vertrek" ] &&
+		ovresp=$(echo "$ovresp" | tail -n 3 | tac) ||
+		ovresp=$(echo "$ovresp" | head -n 3)
+
+	firstroute=$(echo "$ovresp" | head -n 1)
+
+	# First route is lowest by default
+	mintransfers=$(echo "$firstroute" | sed "s/\\\n\\\n/|/g" | tr -dc '|' | wc -c)
+	finalroute=$firstroute
+
+	# Loops through the other routes and finds the shortest one that resembles the wanted time the most
+	while IFS= read -r line; do
+		transfers=$(echo "$line" | sed "s/\\\n\\\n/|/g" | tr -dc '|' | wc -c)
+
+		[ "$transfers" -le "$mintransfers" ] && mintransfers=$transfers && finalroute=$line
+
+	done <<-EOT
+	$(echo "$ovresp" | tail -n +2)
+	EOT
+else
+	finalroute=$(echo "$ovresp" | head -n 3 | tail -1)
+fi
+
+[ -n "$raw" ] &&
+	# When raw is set, format the data in CSV format
+	printf "%b" "$(echo "$finalroute" |
+       		sed "s/\([^n]*\) (/\1|||/g ;
+       		s/DESCRIPTION:Reisadvies \\\n// ;
+       		s/ \?\([0-9]*\)\? richting \([^|]*\)|||/|\1|\2|/g ;
+       		s/\(..:..\) \?\(..:..\)\? \?/\1|\2|/g ;
+       		s/)\\\n[^0-2]*\([^ ]*\) /|\1|/g ;
+       		s/\\\n[A-Za-z]* [^0-2]*\([^ ]*\) /|||\1|/g ;
+       		s/\\\n\(\\\n\)/||\1/g ;
+       		s/$/||/ ;
+       		s/ \([^ ]*\) \([0-9]*\?[A-Za-z]\?\)||/|\1|\2/g")\n" ||
+	# When raw is not set, remove DESCRIPTION at the top,
+	# colorize each top line, and place emojis
+	printf "%b" "$(echo "$finalroute" |
+		sed "s/n\([^\\]* richting [^\\]*\)/n\\\e[1;33m\1\\\e[0m/g ;
+		s/DESCRIPTION:Reisadvies \\\n// ;
+		s/\(Lopen[^\\]*\)/\\\e[1;33m\1\\\e[0m/g ;
+		s/\(Belbus\)/🚐\1/g ;
+		s/\(Bus \)/🚍\1/g ;
+		s/\(Bushalte\)/🚏\1/g ;
+		s/\(buurtRRReis\)/🚐\1/g ;
+		s/\(Intercity\)/🚆\1/g ;
+		s/\(Lopen\)/🚶\1/g ;
+		s/\(Metro\)/🚇\1/g
+		s/\(Qliner\)/🚍\1/g ;
+		s/\(Qlink\)/🚍\1/g ;
+		s/\(RRReis\)/🚍\1/g ;
+		s/\(Sneltrein\)/🚅\1/g ;
+		s/\(Sprinter\)/🚆\1/g ;
+		s/\(Stadsbus\)/🚍\1/g ;
+		s/\(Stoptrein\)/🚆\1/g ;
+		s/\(Tram\)/🚊\1/g ;
+		s/\([^ ]\+station\)/🚉\1/g")\n"

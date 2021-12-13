@@ -1,0 +1,94 @@
+#!/bin/sh
+digiroosterinfo() { cat << EOF
+digirooster: get Hanzehogeschool Digirooster data on the terminal
+Dependencies: curl pass
+Usage: Run the program normally to be prompted for info.
+       Use the flags to predefine info.
+Options:
+  -g	The group number, this is the name of the Digirooster request
+  -y	The school year
+  -i	The school ID, found by inspecting the Digirooster request
+  -s    The starting range of the date
+  -e	The end range of the date
+  -S	The starting time
+  -E	The end time
+EOF
+}
+
+# User editable variables
+cookiepass="hanze_account_school_cookie"
+
+while getopts "g:y:i:s:e:S:E:" o; do case "${o}" in
+	g) group="$OPTARG" ;;
+	y) year="$OPTARG" ;;
+	i) schoolid="$OPTARG" ;;
+        s) datestarttmp="$OPTARG" ;;
+        e) dateendtmp="$OPTARG" ;;
+        S) timestarttmp="$OPTARG" ;;
+        E) timeendtmp="$OPTARG" ;;
+        *) digiroosterinfo ; exit 1 ;;
+esac done
+
+domain="digirooster.hanze.nl"
+
+! curl --silent $domain && printf "\e[1;31mPlease connect to the internet before running this script.\e[0m\n" >/dev/tty && exit 1
+
+[ -z "$group" ] && printf "\e[1;34mGive the group number:\e[0m\n" >/dev/tty &&
+        read -r group
+while ! echo "$group" | grep -q "^[0-9]*$"; do
+        printf "\e[1;31m'%s' is not a valid group number. Please retype the group number.\e[0m\n" "$group" >/dev/tty
+        read -r group
+done
+
+[ -z "$year" ] && printf "\e[1;34mGive the year:\e[0m\n" >/dev/tty &&
+        read -r year
+while ! echo "$year" | grep -q "^[0-9]$"; do
+        printf "\e[1;31m'%s' is not a valid year. Please retype the year.\e[0m\n" "$year" >/dev/tty
+        read -r year
+done
+
+[ -z "$schoolid" ] && printf "\e[1;34mGive the school ID:\e[0m\n" >/dev/tty &&
+        read -r schoolid
+while ! echo "$schoolid" | grep -q "^[0-9]$"; do
+        printf "\e[1;31m'%s' is not a valid school ID. Please retype the school ID.\e[0m\n" "$schoolid" >/dev/tty
+        read -r schoolid
+done
+
+[ -z "$datestarttmp" ] && printf "\e[1;34mGive the starting date:\e[0m\n" >/dev/tty &&
+        read -r datestarttmp
+while ! datestart=$(date -d "$datestarttmp" +"%Y-%m-%d" 2>/dev/null); do
+        printf "\e[1;31m'%s' is not a valid date. Please retype the date.\e[0m\n" "$datestarttmp" >/dev/tty
+        read -r datestarttmp
+done
+
+[ -z "$dateendtmp" ] && printf "\e[1;34mGive the end date:\e[0m\n" >/dev/tty &&
+        read -r dateendtmp
+while ! dateend=$(date -d "$dateendtmp" +"%Y-%m-%d" 2>/dev/null); do
+        printf "\e[1;31m'%s' is not a valid date. Please retype the date.\e[0m\n" "$dateendtmp" >/dev/tty
+        read -r dateendtmp
+done
+
+[ -z "$timestarttmp" ] && printf "\e[1;34mGive the starting time:\e[0m\n" >/dev/tty &&
+       read -r timestarttmp
+while ! timestart=$(date -d "$timestarttmp" +"%H:%M:%S" 2>/dev/null); do
+        printf "\e[1;31m'%s' is not a valid time. Please retype the time.\e[0m\n" "$timestarttmp" >/dev/tty
+        read -r timestarttmp
+done
+
+[ -z "$timeendtmp" ] && printf "\e[1;34mGive the end time:\e[0m\n" >/dev/tty &&
+        read -r timeendtmp
+while ! timeend=$(date -d "$timeendtmp" +"%H:%M:%S" 2>/dev/null); do
+        printf "\e[1;31m'%s' is not a valid time. Please retype the time.\e[0m\n" "$timeendtmp" >/dev/tty
+        read -r timeendtmp
+done
+
+# If the starting date is greater than or equal to the ending date,
+# make the ending date the starting date +1 day
+[ "$(echo "$datestart" | tr -d "-")" -ge "$(echo "$dateend" | tr -d "-")" ] && dateend=$(date -d "$datestart +1 day" +"%Y-%m-%d")
+
+url="https://digirooster.hanze.nl/API/Schedule/Group/$group"
+
+# Make the curl request
+curl --silent --cookie "$(pass $cookiepass)" "$url" \
+  -H 'content-type: application/json' \
+  --data-raw '{"sources":["2","1"],"year":"'"$year"'","schoolId":"'"$schoolid"'","rangeStart":"'"$datestart"'T'"$timestart"'","rangeEnd":"'"$dateend"'T'"$timeend"'","storeSelection":false}'

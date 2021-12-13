@@ -1,0 +1,20 @@
+#!/bin/sh
+# Download all relevant files on an archive.org download page.
+#
+# Usage: archivedl https://archive.org/download/<something> <location>
+
+[ -z "$1" ] && echo "missing url operand" && exit 1
+[ -z "$2" ] && echo "missing destination file operand after '$1'" && exit 1
+
+wget --spider "$1" || exit 1
+
+urlcode=$(echo "$1" | sed "s/.*\///")
+tmploc="$2/$urlcode"
+
+if [ ! -f "$tmploc" ]; then
+	curl "$1" | grep -o "href=\"[^\"]*" | awk 'NR == 1, $0 ~ /\/details\/'"$urlcode"'/ { next } /\/$/ || /'"$urlcode"'/ || /__ia_thumb.jpg/ { next } { sub(/href="/, "") ; print }' > "$tmploc"
+	$EDITOR "$tmploc"
+fi
+
+sed "s|^|$1/|" "$tmploc" | xargs -P 6 -I{} wget --continue -P "$2" {}
+rm "$tmploc"
