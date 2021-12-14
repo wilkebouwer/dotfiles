@@ -7,7 +7,8 @@ Usage: Run the program normally to be prompted for info.
 Options:
   -x	Pipe seperated list of subjects to exclude
   -o	Outward shift, the amount of time you want to substract or add to the time school starts (e.g. +30 minutes)
-  -r	Return shift, the amount of time you want to substract or add to the time school is finished (e.g. +30 minutes)
+  -p	Return shift, the amount of time you want to substract or add to the time school is finished (e.g. +30 minutes)
+  -r	Output the data in raw CSV format
 Ovrt options:
   Outward:
   -f	From where you want to start the route
@@ -20,7 +21,7 @@ Ovrt options:
   -F    From where you want to start the route
   -V	Via, an intermediary place between the start and end of route
   -T	To where you want the route to arrive
-  -R	Interchange time in minutes
+  -P	Interchange time in minutes
   -J	Prefer routes with the lowest amount of transfers
 Digirooster options:
   -g    The group number (e.g 1830, use devtools for this)
@@ -90,10 +91,10 @@ info=$(digirooster \
 	awk -F"\"" ''"$exclude"' { date = substr($7, 1, 10) ; gsub(/-/, "", date) } date < '"$(date +"%Y%m%d")"' { next } day !~ substr($7, 9, 2) { day = substr($7, 9, 2) ; sub(/:..$/, "", $7) sub(/[^T]*/, "", prev) sub(/:..$/, "", prev) ; print start prev ; start = $7 } { prev = $11 } END { sub(/[^T]*/, "", prev) sub(/:..$/, "", prev) ; print start prev }' |
 	tail -n +2)
 
-[ -z "$info" ] && printf "\e[1;34mNo Digirooster data available.\e[0m\n" && exit
-
 # Loop through all lines of digirooster data and run ovrt on them
 if [ -n "$raw" ]; then
+	[ -z "$info" ] && exit
+
 	echo "$info" | while read -r line; do
 		date=$(echo "$line" | cut -d'T' -f1)
 
@@ -124,6 +125,8 @@ if [ -n "$raw" ]; then
 			sed "s/^/$date|$endtime|/g"
 	done
 else
+	[ -z "$info" ] && printf "\e[1;34mNo Digirooster data available.\e[0m\n" && exit
+
 	echo "$info" | while read -r line; do
 		date=$(echo "$line" | cut -d'T' -f1)
 
