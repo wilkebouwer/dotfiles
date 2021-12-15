@@ -1,0 +1,9 @@
+#!/bin/sh
+# Loop through a command n amount of times.
+# Usage: loopcomm "$command" $n
+
+for _ in $(seq 2 "$2"); do
+	sh -c "$1" >/dev/null
+done
+
+sh -c "$1"
