@@ -46,7 +46,7 @@ digiroosterdata=$(digirooster \
 	grep -o "Name\":\"[^\"]*\",\"Start[^]]*][^]]*" |
 	sed "s/.\{7\}\([^\"]*\).\{11\}\(.\{10\}\).\(.\{5\}\).\{23\}\(.\{5\}\).*Rooms\":\[/\2|\3|\4|[DR] \1:/g ;
 	s/{\"Id\":[0-9]*,\"Name\":\"/ /g ;
-	s/\",\"ExternalId.*IsActive.*}//g")
+	s/\",\"ExternalId.*IsActive.*}//g") || exit 0
 
 # Format the dates for use in calcurse
 datestart=$(date -d "$datestart" +"%Y-%m-%d")
