@@ -7,6 +7,8 @@ digicurseinfo() { cat << EOF
 digicurse: integrate the Hanzehogeschool Digirooster with calcurse
 Usage: Run the program normally to be prompted for info.
        Use the flags to predefine info.
+       You can add this script to the calcurse pre-load hook to automatically
+       download the latest Digirooster data.
 Options:
   -g    The group number, this is the name of the Digirooster request
   -y    The school year
@@ -44,7 +46,7 @@ digiroosterdata=$(digirooster \
 	grep -o "Name\":\"[^\"]*\",\"Start[^]]*][^]]*" |
 	sed "s/.\{7\}\([^\"]*\).\{11\}\(.\{10\}\).\(.\{5\}\).\{23\}\(.\{5\}\).*Rooms\":\[/\2|\3|\4|[DR] \1:/g ;
 	s/{\"Id\":[0-9]*,\"Name\":\"/ /g ;
-	s/\",\"ExternalId\":false,\"IsActive\":false}//g")
+	s/\",\"ExternalId.*IsActive.*}//g")
 
 # Format the dates for use in calcurse
 datestart=$(date -d "$datestart" +"%Y-%m-%d")
