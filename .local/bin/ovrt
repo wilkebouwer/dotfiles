@@ -106,7 +106,7 @@ while [ -z "$lowtransferspredef" ]; do
 done
 
 # Format data for the curl request
-echo "$intchtime" | grep -q "^$" && intchtime=0
+intchtime=${intchtime:-0}
 
 fromref=$(echo "$from" | cut -d'|' -f3)
 fromtxt=$(echo "$from" | cut -d'|' -f2)
@@ -117,7 +117,7 @@ fi
 toref=$(echo "$to" | cut -d'|' -f3)
 totxt=$(echo "$to" | cut -d'|' -f2)
 
-datefmt=$(date -d "$date" +%d-%m-%Y)
+datefmt=$(date -d "$date" +"%d-%m-%Y")
 
 # Make the curl request and get the data of the routes
 ovresp=$(curl --silent --request POST "$url" \
