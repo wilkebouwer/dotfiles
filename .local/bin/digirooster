@@ -31,54 +31,54 @@ esac done
 
 domain="digirooster.hanze.nl"
 
-! curl --silent $domain && printf "\e[1;31mPlease connect to the internet before running this script.\e[0m\n" >/dev/tty && exit 1
+! curl --silent $domain && printf "\033[1;31mPlease connect to the internet before running this script.\033[0m\n" >/dev/tty && exit 1
 
-[ -z "$group" ] && printf "\e[1;34mGive the group number:\e[0m\n" >/dev/tty &&
+[ -z "$group" ] && printf "\033[1;34mGive the group number:\033[0m\n" >/dev/tty &&
         read -r group
 while ! echo "$group" | grep -q "^[0-9]*$"; do
-        printf "\e[1;31m'%s' is not a valid group number. Please retype the group number.\e[0m\n" "$group" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid group number. Please retype the group number.\033[0m\n" "$group" >/dev/tty
         read -r group
 done
 
-[ -z "$year" ] && printf "\e[1;34mGive the year:\e[0m\n" >/dev/tty &&
+[ -z "$year" ] && printf "\033[1;34mGive the year:\033[0m\n" >/dev/tty &&
         read -r year
 while ! echo "$year" | grep -q "^[0-9]$"; do
-        printf "\e[1;31m'%s' is not a valid year. Please retype the year.\e[0m\n" "$year" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid year. Please retype the year.\033[0m\n" "$year" >/dev/tty
         read -r year
 done
 
-[ -z "$schoolid" ] && printf "\e[1;34mGive the school ID:\e[0m\n" >/dev/tty &&
+[ -z "$schoolid" ] && printf "\033[1;34mGive the school ID:\033[0m\n" >/dev/tty &&
         read -r schoolid
 while ! echo "$schoolid" | grep -q "^[0-9]$"; do
-        printf "\e[1;31m'%s' is not a valid school ID. Please retype the school ID.\e[0m\n" "$schoolid" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid school ID. Please retype the school ID.\033[0m\n" "$schoolid" >/dev/tty
         read -r schoolid
 done
 
-[ -z "$datestarttmp" ] && printf "\e[1;34mGive the starting date:\e[0m\n" >/dev/tty &&
+[ -z "$datestarttmp" ] && printf "\033[1;34mGive the starting date:\033[0m\n" >/dev/tty &&
         read -r datestarttmp
 while ! datestart=$(date -d "$datestarttmp" +"%Y-%m-%d" 2>/dev/null); do
-        printf "\e[1;31m'%s' is not a valid date. Please retype the date.\e[0m\n" "$datestarttmp" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid date. Please retype the date.\033[0m\n" "$datestarttmp" >/dev/tty
         read -r datestarttmp
 done
 
-[ -z "$dateendtmp" ] && printf "\e[1;34mGive the end date:\e[0m\n" >/dev/tty &&
+[ -z "$dateendtmp" ] && printf "\033[1;34mGive the end date:\033[0m\n" >/dev/tty &&
         read -r dateendtmp
 while ! dateend=$(date -d "$dateendtmp" +"%Y-%m-%d" 2>/dev/null); do
-        printf "\e[1;31m'%s' is not a valid date. Please retype the date.\e[0m\n" "$dateendtmp" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid date. Please retype the date.\033[0m\n" "$dateendtmp" >/dev/tty
         read -r dateendtmp
 done
 
-[ -z "$timestarttmp" ] && printf "\e[1;34mGive the starting time:\e[0m\n" >/dev/tty &&
+[ -z "$timestarttmp" ] && printf "\033[1;34mGive the starting time:\033[0m\n" >/dev/tty &&
        read -r timestarttmp
 while ! timestart=$(date -d "$timestarttmp" +"%H:%M:%S" 2>/dev/null); do
-        printf "\e[1;31m'%s' is not a valid time. Please retype the time.\e[0m\n" "$timestarttmp" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid time. Please retype the time.\033[0m\n" "$timestarttmp" >/dev/tty
         read -r timestarttmp
 done
 
-[ -z "$timeendtmp" ] && printf "\e[1;34mGive the end time:\e[0m\n" >/dev/tty &&
+[ -z "$timeendtmp" ] && printf "\033[1;34mGive the end time:\033[0m\n" >/dev/tty &&
         read -r timeendtmp
 while ! timeend=$(date -d "$timeendtmp" +"%H:%M:%S" 2>/dev/null); do
-        printf "\e[1;31m'%s' is not a valid time. Please retype the time.\e[0m\n" "$timeendtmp" >/dev/tty
+        printf "\033[1;31m'%s' is not a valid time. Please retype the time.\033[0m\n" "$timeendtmp" >/dev/tty
         read -r timeendtmp
 done
 

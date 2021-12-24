@@ -59,17 +59,17 @@ while getopts "o:p:f:v:t:F:V:T:g:y:i:s:e:S:E:x:O:P:rIJ" o; do case "${o}" in
         *) digirouteinfo ; exit 1 ;;
 esac done
 
-[ -z "$outwardshiftpredef" ] && printf "\e[1;34mGive the outward shift value: (Optional)\e[0m\n" >/dev/tty &&
+[ -z "$outwardshiftpredef" ] && printf "\033[1;34mGive the outward shift value: (Optional)\033[0m\n" >/dev/tty &&
 	read -r outwardshift
 while ! date -d "today $outwardshift" >/dev/null 2>&1; do
-	printf "\e[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\e[0m\n" "$outwardshift" >/dev/tty
+	printf "\033[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\033[0m\n" "$outwardshift" >/dev/tty
 	read -r outwardshift
 done
 
-[ -z "$returnshiftpredef" ] && printf "\e[1;34mGive the return shift value: (Optional)\e[0m\n" >/dev/tty &&
+[ -z "$returnshiftpredef" ] && printf "\033[1;34mGive the return shift value: (Optional)\033[0m\n" >/dev/tty &&
 	read -r returnshift
 while ! date -d "today $returnshift" >/dev/null 2>&1; do
-	printf "\e[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\e[0m\n" "$returnshift" >/dev/tty
+	printf "\033[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\033[0m\n" "$returnshift" >/dev/tty
 	read -r returnshift
 done
 
@@ -125,7 +125,7 @@ if [ -n "$raw" ]; then
 			sed "s/^/$date|$endtime|/g"
 	done
 else
-	[ -z "$info" ] && printf "\e[1;34mNo Digirooster data available.\e[0m\n" && exit
+	[ -z "$info" ] && printf "\033[1;34mNo Digirooster data available.\033[0m\n" && exit
 
 	echo "$info" | while read -r line; do
 		date=$(echo "$line" | cut -d'T' -f1)
@@ -136,7 +136,7 @@ else
 		# Apply return shift to endtime
 		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +"%H:%M")
 
-		printf "%b" "\n\e[1;34m=====| $(date -d "$date" +"%A %d %B (%Y-%m-%d)") |=====\n\e[1;32m- ($starttime) OUTWARD:\e[0m\n$(ovrt \
+		printf "%b" "\n\033[1;34m=====| $(date -d "$date" +"%A %d %B (%Y-%m-%d)") |=====\n\033[1;32m- ($starttime) OUTWARD:\033[0m\n$(ovrt \
 			-f "$fromoutward" \
 			-v "$viaoutward" \
 			-t "$tooutward" \
@@ -145,7 +145,7 @@ else
 			-i "$intchoutwardtime" \
 			-A''$lowoutwardtransfers'')\n"
 
-		printf "%b" "\n\e[1;31m- ($endtime) RETURN:\e[0m\n$(ovrt \
+		printf "%b" "\n\033[1;31m- ($endtime) RETURN:\033[0m\n$(ovrt \
 			-f "$fromreturn" \
 			-v "$viareturn" \
 			-t "$toreturn" \
