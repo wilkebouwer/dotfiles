@@ -155,8 +155,8 @@ ovresp=$(curl --silent --request POST "$url" \
 if [ -n "$lowtransfers" ]; then
 	# Filter the data to only include relevant routes
 	[ $deporarr = "vertrek" ] &&
-		ovresp=$(printf "%s" "$ovresp" | tail -n 3 | tac) ||
-		ovresp=$(printf "%s" "$ovresp" | head -n 3)
+		ovresp=$(printf "%s\n" "$ovresp" | tail -n 3 | tac) ||
+		ovresp=$(printf "%s\n" "$ovresp" | head -n 3)
 
 	firstroute=$(printf "%s" "$ovresp" | head -n 1)
 
