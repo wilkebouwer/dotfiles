@@ -3,20 +3,20 @@
 # Download all public transport locations using https://9292.nl. Used by the script ovrt.
 
 # User editable variables
-tmp_ovlocs="${XDG_CACHE_HOME:-$HOME/.cache}/ovlocs"
+tmpovlocs="${XDG_CACHE_HOME:-$HOME/.cache}/ovlocs"
 ovlocs="${XDG_DATA_HOME:-$HOME/.local/share}/ovlocs"
 
-alphabet="abcdefghijklmnopqrstuvwxyz"
+alphabet='abcdefghijklmnopqrstuvwxyz'
 
 for a in $(echo "$alphabet" | fold -w1); do
 	for b in $(echo "$alphabet" | fold -w1); do
 		for c in $(echo "$alphabet" | fold -w1); do
 			for d in $(echo "$alphabet" | fold -w1); do
-				curl "https://9292.nl/suggest?userInput=$a$b$c$d&locationType=AllLocationTypes" | awk -F "\"" '/"Displayname":/ { dn = $4 } /"SubType":/ { st = $4 } /"Url":/ { u = $4 } /},/ { print st "|" dn "|" u }' >> "$tmp_ovlocs" &
+				curl "https://9292.nl/suggest?userInput=$a$b$c$d&locationType=AllLocationTypes" | awk -F "\"" '/"Displayname":/ { dn = $4 } /"SubType":/ { st = $4 } /"Url":/ { u = $4 } /},/ { print st "|" dn "|" u }' >> "$tmpovlocs" &
 			done
 		done
 	done
 done
 
-sort "$tmp_ovlocs" | uniq > "$ovlocs"
-rm "$tmp_ovlocs"
+sort "$tmpovlocs" | uniq > "$ovlocs"
+rm "$tmpovlocs"

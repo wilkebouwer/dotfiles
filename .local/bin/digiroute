@@ -34,9 +34,9 @@ Digirooster options:
 EOF
 }
 
-while getopts "o:p:f:v:t:F:V:T:g:y:i:s:e:S:E:x:O:P:rIJ" o; do case "${o}" in
-	o) outwardshift="$OPTARG" ; outwardshiftpredef=1 ;;
-	p) returnshift="$OPTARG" ; returnshiftpredef=1 ;;
+while getopts 'o:p:f:v:t:F:V:T:g:y:i:s:e:S:E:x:O:P:rIJ' o; do case "${o}" in
+	o) outwardshift="$OPTARG" ; outwardshiftpredef='1' ;;
+	p) returnshift="$OPTARG" ; returnshiftpredef='1' ;;
 	f) fromoutward="$OPTARG" ;;
 	v) viaoutward="$OPTARG" ;;
 	t) tooutward="$OPTARG" ;;
@@ -53,20 +53,20 @@ while getopts "o:p:f:v:t:F:V:T:g:y:i:s:e:S:E:x:O:P:rIJ" o; do case "${o}" in
 	x) exclude="$OPTARG" ;;
 	O) intchoutwardtime="$OPTARG" ;;
 	P) intchreturntime="$OPTARG" ;;
-	r) raw=1 ;;
-	I) lowoutwardtransfers="S" ;;
-	J) lowreturntransfers="S" ;;
+	r) raw='1' ;;
+	I) lowoutwardtransfers='S' ;;
+	J) lowreturntransfers='S' ;;
         *) digirouteinfo ; exit 1 ;;
 esac done
 
-[ -z "$outwardshiftpredef" ] && printf "\033[1;34mGive the outward shift value: (Optional)\033[0m\n" >/dev/tty &&
+[ -z "$outwardshiftpredef" ] && printf '\033[1;34mGive the outward shift value: (Optional)\033[0m\n' >/dev/tty &&
 	read -r outwardshift
 while ! date -d "today $outwardshift" >/dev/null 2>&1; do
 	printf "\033[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\033[0m\n" "$outwardshift" >/dev/tty
 	read -r outwardshift
 done
 
-[ -z "$returnshiftpredef" ] && printf "\033[1;34mGive the return shift value: (Optional)\033[0m\n" >/dev/tty &&
+[ -z "$returnshiftpredef" ] && printf '\033[1;34mGive the return shift value: (Optional)\033[0m\n' >/dev/tty &&
 	read -r returnshift
 while ! date -d "today $returnshift" >/dev/null 2>&1; do
 	printf "\033[1;31m'%s' isn't a valid return shift value. Please retype the return shift value.\033[0m\n" "$returnshift" >/dev/tty
@@ -75,7 +75,7 @@ done
 
 # If exclude is set, format exclude for use in awk
 [ -n "$exclude" ] &&
-	exclude=$(echo "$exclude" | sed "s@/@\\\/@g ; s@|@/|| \$3 ~ /@g") &&
+	exclude=$(echo "$exclude" | sed 's@/@\\/@g ; s@|@/|| \$3 ~ /@g') &&
 	exclude="\$3 ~ /$exclude/ { next }"
 
 # Get data from digirooster and format it correctly
@@ -87,7 +87,7 @@ info=$(digirooster \
 	-e "$dateend" \
 	-S "$timestart" \
 	-E "$timeend" |
-	grep -o "Name\":\"[^\"]*\",\"Start\":\"[^\"]*\",\"End\":\"[^\"]*" |
+	grep -o 'Name":"[^"]*","Start":"[^"]*","End":"[^"]*' |
 	awk -F"\"" ''"$exclude"' { date = substr($7, 1, 10) ; gsub(/-/, "", date) } date < '"$(date +"%Y%m%d")"' { next } day !~ substr($7, 9, 2) { day = substr($7, 9, 2) ; sub(/:..$/, "", $7) sub(/[^T]*/, "", prev) sub(/:..$/, "", prev) ; print start prev ; start = $7 } { prev = $11 } END { sub(/[^T]*/, "", prev) sub(/:..$/, "", prev) ; print start prev }' |
 	tail -n +2)
 
@@ -99,10 +99,10 @@ if [ -n "$raw" ]; then
 		date=$(echo "$line" | cut -d'T' -f1)
 
 		# Apply outward shift to starttime
-		starttime=$(echo "$line" | cut -d'T' -f2) starttime=$(date -d "$starttime $date $outwardshift" +"%H:%M")
+		starttime=$(echo "$line" | cut -d'T' -f2) starttime=$(date -d "$starttime $date $outwardshift" +'%H:%M')
 
 		# Apply return shift to endtime
-		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +"%H:%M")
+		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +'%H:%M')
 
 		ovrt \
 			-f "$fromoutward" \
@@ -125,16 +125,16 @@ if [ -n "$raw" ]; then
 			sed "s/^/$date|$endtime|/g"
 	done
 else
-	[ -z "$info" ] && printf "\033[1;34mNo Digirooster data available.\033[0m\n" && exit
+	[ -z "$info" ] && printf '\033[1;34mNo Digirooster data available.\033[0m\n' && exit
 
 	echo "$info" | while read -r line; do
 		date=$(echo "$line" | cut -d'T' -f1)
 
 		# Apply outward shift to starttime
-		starttime=$(echo "$line" | cut -d'T' -f2) starttime=$(date -d "$starttime $date $outwardshift" +"%H:%M")
+		starttime=$(echo "$line" | cut -d'T' -f2) starttime=$(date -d "$starttime $date $outwardshift" +'%H:%M')
 
 		# Apply return shift to endtime
-		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +"%H:%M")
+		endtime=$(echo "$line" | cut -d'T' -f3) endtime=$(date -d "$endtime $date $returnshift" +'%H:%M')
 
 		printf "%b" "\n\033[1;34m=====| $(date -d "$date" +"%A %d %B (%Y-%m-%d)") |=====\n\033[1;32m- ($starttime) OUTWARD:\033[0m\n$(ovrt \
 			-f "$fromoutward" \

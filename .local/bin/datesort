@@ -3,7 +3,7 @@
 #
 # Usage: '$scriptname <source file(s)> <destination directory>'
 
-[ -z "$1" ] && echo "missing file operand" && exit 1
+[ -z "$1" ] && echo 'missing file operand' && exit 1
 [ -z "$2" ] && echo "missing destination file operand after '$1'" && exit 1
 
 destdir=$(echo "$@" | rev | cut -d' ' -f1 | rev)

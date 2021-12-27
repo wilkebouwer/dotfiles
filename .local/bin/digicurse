@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Exit if script is already running
-pidof -o %PPID -x "digicurse" >/dev/null && exit
+pidof -o %PPID -x 'digicurse' >/dev/null && exit
 
 digicurseinfo() { cat << EOF
 digicurse: integrate the Hanzehogeschool Digirooster with calcurse
@@ -23,7 +23,7 @@ EOF
 # User editable variables
 icalfile="${XDG_CACHE_HOME:-$HOME/.cache}/digicurse"
 
-while getopts "g:y:i:s:e:S:E:" o; do case "${o}" in
+while getopts 'g:y:i:s:e:S:E:' o; do case "${o}" in
         g) group="$OPTARG" ;;
         y) year="$OPTARG" ;;
         i) schoolid="$OPTARG" ;;
@@ -43,14 +43,14 @@ digiroosterdata=$(digirooster \
 	-e "$dateend" \
 	-S "$timestart" \
 	-E "$timeend" |
-	grep -o "Name\":\"[^\"]*\",\"Start[^]]*][^]]*" |
-	sed "s/.\{7\}\([^\"]*\).\{11\}\(.\{10\}\).\(.\{5\}\).\{23\}\(.\{5\}\).*Rooms\":\[/\2|\3|\4|[DR] \1:/g ;
-	s/{\"Id\":[0-9]*,\"Name\":\"/ /g ;
-	s/\",\"ExternalId.*IsActive.*}//g") || exit 0
+	grep -o 'Name":"[^"]*","Start[^]]*][^]]*' |
+	sed 's/.\{7\}\([^"]*\).\{11\}\(.\{10\}\).\(.\{5\}\).\{23\}\(.\{5\}\).*Rooms":\[/\2|\3|\4|[DR] \1:/g ;
+	s/{"Id":[0-9]*,"Name":"/ /g ;
+	s/","ExternalId.*IsActive.*}//g') || exit 0
 
 # Format the dates for use in calcurse
-datestart=$(date -d "$datestart" +"%Y-%m-%d")
-dateend=$(date -d "$dateend" +"%Y-%m-%d")
+datestart=$(date -d "$datestart" +'%Y-%m-%d')
+dateend=$(date -d "$dateend" +'%Y-%m-%d')
 
 # Get calcurse data
 calcursedata=$(calcurse \
@@ -58,13 +58,13 @@ calcursedata=$(calcurse \
 	-G \
 	--filter-start-from "$datestart" \
 	--filter-start-before "$dateend" \
-	--filter-pattern "^\[DR\]" |
-	sed "s/\(..\)\/\(..\)\/\(.\{4\}\)/\3-\1-\2/ ;
-	s/\(.\{10\}\).\{3\}\(.\{5\}\).\{17\}\(.\{5\}\)/\1|\2|\3/")
+	--filter-pattern '^\[DR\]' |
+	sed 's/\(..\)\/\(..\)\/\(.\{4\}\)/\3-\1-\2/ ;
+	s/\(.\{10\}\).\{3\}\(.\{5\}\).\{17\}\(.\{5\}\)/\1|\2|\3/')
 
 # Loop through calcurse info and remove redundant entries
 while IFS= read -r line; do
-	linefmt=$(echo "$line" | sed "s/\[DR\]/\\\[DR\\\]/")
+	linefmt=$(echo "$line" | sed 's/\[DR\]/\\[DR\\]/')
 
 	echo "$digiroosterdata" | grep -o "$linefmt" >/dev/null && continue
 
@@ -84,21 +84,21 @@ done <<-EOT
 $calcursedata
 EOT
 
-printf "BEGIN:VCALENDAR\nVERSION:2.0\n" > "$icalfile"
+printf 'BEGIN:VCALENDAR\nVERSION:2.0\n' > "$icalfile"
 
 # Loop through digirooster info and add new entries
 echo "$digiroosterdata" | while read -r line; do
-	echo "$calcursedata" | grep -o "$(echo "$line" | sed "s/\[DR\]/\\\[DR\\\]/")" >/dev/null && continue
+	echo "$calcursedata" | grep -o "$(echo "$line" | sed 's/\[DR\]/\\[DR\\]/')" >/dev/null && continue
 
 	date=$(echo "$line" | cut -d'|' -f1)
 	starttime=$(echo "$line" | cut -d'|' -f2)
 	endtime=$(echo "$line" | cut -d'|' -f3)
-	description=$(echo "$line" | cut -d'|' -f4 | sed "s/,/\\\,/")
+	description=$(echo "$line" | cut -d'|' -f4 | sed 's/,/\\,/')
 
 	dtstart="$(echo "$date" | tr -d '-')T$(echo "$starttime" | tr -d ':')00"
-	duration="P0DT$(echo $(( $(echo "$endtime" | tr -d ':' | sed "s/0*//") - $(echo "$starttime" | tr -d ':' | sed "s/0*//") )) | sed "s/\(.*\)\(..\)$/\1H\2M0S/")"
+	duration="P0DT$(echo $(( $(echo "$endtime" | tr -d ':' | sed 's/0*//') - $(echo "$starttime" | tr -d ':' | sed 's/0*//') )) | sed 's/\(.*\)\(..\)$/\1H\2M0S/')"
 
-	printf "BEGIN:VEVENT\nDTSTART:%s\nDURATION:%s\nSUMMARY:%s\nEND:VEVENT\n" "$dtstart" "$duration" "$description" >> "$icalfile"
+	printf 'BEGIN:VEVENT\nDTSTART:%s\nDURATION:%s\nSUMMARY:%s\nEND:VEVENT\n' "$dtstart" "$duration" "$description" >> "$icalfile"
 done
 
-grep "VEVENT" "$icalfile" >/dev/null && calcurse -i "$icalfile" || exit 0
+grep 'VEVENT' "$icalfile" >/dev/null && calcurse -i "$icalfile" || exit 0
