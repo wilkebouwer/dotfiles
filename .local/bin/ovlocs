@@ -1,5 +1,4 @@
 #!/bin/sh
-#
 # Download all public transport locations using https://9292.nl. Used by the script ovrt.
 
 # User editable variables

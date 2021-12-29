@@ -194,9 +194,8 @@ fi
 	# When raw is not set, remove DESCRIPTION at the top,
 	# colorize each top line, and place emojis
 	printf "%b" "$(printf "%s" "$finalroute" |
-		sed 's/n\([^\\]* richting [^\\]*\)/n\\033[1;33m\1\\033[0m/g ;
+		sed 's/n\([^\)]*)\)/n\\033[1;33m\1\\033[0m/g ;
 		s/DESCRIPTION:Reisadvies \\n// ;
-		s/\(Lopen[^\\]*\)/\\033[1;33m\1\\033[0m/g ;
 		s/\(Belbus\)/🚐\1/g ;
 		s/\(Bus \)/🚍\1/g ;
 		s/\(Bushalte\)/🚏\1/g ;

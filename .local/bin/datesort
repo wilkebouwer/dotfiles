@@ -1,5 +1,5 @@
 #!/bin/sh
-# Description: Sort files into year/month/day/ folders based on modification date.
+# Sort files into year/month/day/ folders based on modification date.
 #
 # Usage: '$scriptname <source file(s)> <destination directory>'
 
