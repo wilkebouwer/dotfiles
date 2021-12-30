@@ -153,6 +153,7 @@ ovresp=$(curl --silent $url \
 	# Convert HTML special entities to normal text
 	perl -n -mHTML::Entities -e ' ; print HTML::Entities::decode_entities($_) ;')
 
+
 # Get the relevant route to print
 if [ -n "$lowtransfers" ]; then
 	# Filter the data to only include relevant routes
@@ -194,21 +195,25 @@ fi
 	# When raw is not set, remove DESCRIPTION at the top,
 	# colorize each top line, and place emojis
 	printf "%b" "$(printf "%s" "$finalroute" |
-		sed 's/n\([^\)]*)\)/n\\033[1;33m\1\\033[0m/g ;
+		sed 's/n\([^\\]* richting [^\\]*\)/n\\033[1;33m\1\\033[0m/g ;
 		s/DESCRIPTION:Reisadvies \\n// ;
-		s/\(Belbus\)/🚐\1/g ;
-		s/\(Bus \)/🚍\1/g ;
-		s/\(Bushalte\)/🚏\1/g ;
-		s/\(buurtRRReis\)/🚐\1/g ;
+		s/\(Lopen[^\\]*\)/\\033[1;33m\1\\033[0m/g ;
+		s/3m\([^ ]*[Bb]us\)/3m🚍\1/g ;
+		s/3m\(Metro \)/3m🚇\1/g
+		s/3m\([^ ]*RRReis\)/3m🚐\1/g ;
+		s/3m\(Qlin[^ ]*\)/3m🚍\1/g ;
+		s/3m\(Tram\)/3m🚊\1/g ;
+		s/🚍\(Belbus\)/🚐\1/g ;
+		s/\(Hopper\)/🚍\1/g ;
 		s/\(Intercity\)/🚆\1/g ;
 		s/\(Lopen\)/🚶\1/g ;
-		s/\(Metro\)/🚇\1/g
-		s/\(Qliner\)/🚍\1/g ;
-		s/\(Qlink\)/🚍\1/g ;
-		s/\(RRReis\)/🚍\1/g ;
+		s/\(R-NET\)/🟥\1/g ;
 		s/\(Sneltrein\)/🚅\1/g ;
 		s/\(Sprinter\)/🚆\1/g ;
-		s/\(Stadsbus\)/🚍\1/g ;
 		s/\(Stoptrein\)/🚆\1/g ;
-		s/\(Tram\)/🚊\1/g ;
-		s/\([^ ]\+station\)/🚉\1/g')\n"
+		s/\(Syntus Twents\)/🟥\1/g ;
+		s/\(Veerdienst\)/⛴️\1/g ;
+		s/\(Snelboot\)/🛥️\1/g ;
+		s/\(StreekBuzz\)/🚍\1/g ;
+		s/\([^ ]*halte\)/🚏\1/g ;
+		s/\([0-9] \)\([^ ]\+station\)/\1🚉\2/g')\n"
