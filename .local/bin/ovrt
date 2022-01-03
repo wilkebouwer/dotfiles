@@ -112,10 +112,11 @@ intchtime=${intchtime:-0}
 
 fromref=$(echo "$from" | cut -d'|' -f3)
 fromtxt=$(echo "$from" | cut -d'|' -f2)
-if [ -n "$via" ] ; then
-	viaref=$(echo "$via" | cut -d'|' -f3)
+
+[ -n "$via" ] &&
+	viaref=$(echo "$via" | cut -d'|' -f3) &&
 	viatxt=$(echo "$via" | cut -d'|' -f2)
-fi
+
 toref=$(echo "$to" | cut -d'|' -f3)
 totxt=$(echo "$to" | cut -d'|' -f2)
 
@@ -191,7 +192,7 @@ fi
        		s/\\n[A-Za-z]* [^0-2]*\([^ ]*\) /|||\1|/g ;
        		s/\\n\(\\n\)/||\1/g ;
        		s/$/||/ ;
-       		s/ \([^ ]*\) \([0-9]*\?[A-Za-z]\?\)||/|\1|\2/g')\n" ||
+       		s/ \([^ ]*\) \([A-Za-z]\?[0-9]*\?[A-Za-z]\?\)||/|\1|\2/g')\n" ||
 	# When raw is not set, remove DESCRIPTION at the top,
 	# colorize each top line, and place emojis
 	printf "%b" "$(printf "%s" "$finalroute" |
