@@ -69,7 +69,7 @@ while IFS= read -r line; do
 	echo "$digiroosterdata" | grep -o "$linefmt" >/dev/null && continue
 
 	date=$(echo "$line" | cut -d'|' -f1)
-	description=$(echo "$linefmt" | cut -d'|' -f4)
+	description=$(echo "$linefmt" | cut -d'|' -f4 | sed 's/(/\\(/g ; s/)/\\)/g')
 
 	calcurse \
 		--input-datefmt 4 \
