@@ -173,12 +173,12 @@ ovresp=$(curl --silent $url \
 	ovresp=$(printf "%s\n" "$ovresp" | head -n 3)
 
 # Filter out belbus if option selected and route exists without belbus
-[ -n "$nobelbus" ] && [ -z $(echo "$ovresp" | grep -q 'Belbus') ] &&
+[ -n "$nobelbus" ] && [ ! $(echo "$ovresp" | grep -q 'Belbus') ] &&
 	ovresp=$(echo "$ovresp" | grep -v 'Belbus')
 	ovresplines=$(echo "$ovresp" | wc -l)
 
 # Get the relevant route to print
-if [ -n "$lowtransfers" ] && ovresplines=${ovresplines:-3} && [ "$ovresplines" > 1 ]; then
+if [ -n "$lowtransfers" ] && ovresplines=${ovresplines:-3} && [ "$ovresplines" -gt 1 ]; then
 	firstroute=$(printf "%s" "$ovresp" | head -n 1)
 
 	# First route is lowest by default
