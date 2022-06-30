@@ -16,7 +16,7 @@ Options:
   -D	Make the time the departing time
   -A	Make the time the arrival time
   -S	Prefer route with the lowest amount of transfers
-  -B	Do not include routes with belbus, if possible.
+  -B	Choose a route without a belbus if possible.
 EOF
 }
 
@@ -174,11 +174,11 @@ ovresp=$(curl --silent $url \
 
 # Filter out belbus if option selected and route exists without belbus
 [ -n "$nobelbus" ] && [ ! $(echo "$ovresp" | grep -q 'Belbus') ] &&
-	ovresp=$(echo "$ovresp" | grep -v 'Belbus')
+	ovresp=$(echo "$ovresp" | grep -v 'Belbus') &&
 	ovresplines=$(echo "$ovresp" | wc -l)
 
 # Get the relevant route to print
-if [ -n "$lowtransfers" ] && ovresplines=${ovresplines:-3} && [ "$ovresplines" -gt 1 ]; then
+if [ -n "$lowtransfers" ] && [ ${ovresplines:-3} -gt 1 ]; then
 	firstroute=$(printf "%s" "$ovresp" | head -n 1)
 
 	# First route is lowest by default
@@ -192,7 +192,7 @@ if [ -n "$lowtransfers" ] && ovresplines=${ovresplines:-3} && [ "$ovresplines" -
 		[ "$transfers" -le "$mintransfers" ] && mintransfers=$transfers && finalroute=$line
 
 	done <<-EOT
-	$(printf "%s" "$ovresp" | tail -n +$(("$ovresplines" - 1)))
+	$(printf "%s" "$ovresp" | tail -n +2)
 	EOT
 else
 	finalroute=$(printf "%s" "$ovresp" | head -n 1)
